@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2e7d32" id="meta-theme" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Courses" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <title>Listes de courses</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --card: #ffffff;
+      --primary: #2e7d32;
+      --primary-light: #4caf50;
+      --danger: #c62828;
+      --danger-light: #fce4ec;
+      --text: #212121;
+      --text-muted: #757575;
+      --border: #e0e0e0;
+      --checked-bg: #f1f8e9;
+      --shadow: 0 2px 8px rgba(0,0,0,0.10);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      /* Prevent text selection on tap */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Tous les éléments interactifs : pas de délai au tap */
+    button, a, [role="button"] {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      padding-top: calc(12px + var(--safe-top));
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: var(--shadow);
+    }
+    header h1 { font-size: 1.15rem; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #btn-back {
+      display: none;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.8rem;
+      cursor: pointer;
+      /* 44px tap target */
+      min-width: 44px;
+      min-height: 44px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      margin-left: -8px;
+    }
+    #btn-back:active { background: rgba(255,255,255,0.2); }
+    #header-subtitle {
+      font-size: 0.8rem;
+      opacity: 0.85;
+      display: none;
+      margin-top: 1px;
+    }
+    #btn-shopping {
+      display: none;
+      background: white;
+      color: var(--primary);
+      border: none;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      min-height: 36px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #btn-shopping:active { opacity: 0.8; }
+
+    /* ── Main ── */
+    main {
+      padding: 14px 14px;
+      padding-bottom: calc(14px + var(--safe-bottom));
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Cards listes ── */
+    #lists-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+    .list-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 14px 12px 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      transition: transform 0.1s, background 0.15s;
+      /* Min height pour touch */
+      min-height: 64px;
+    }
+    .list-card:active { transform: scale(0.98); background: #f9f9f9; }
+
+    /* État confirmation suppression */
+    .list-card.confirming {
+      background: #fff8f8;
+      border-color: #ffcdd2;
+    }
+    .list-card.confirming:active { transform: none; }
+
+    .list-card-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .list-card-info { flex: 1; min-width: 0; }
+    .list-card-name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-card-count { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
+
+    .list-card-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      cursor: pointer;
+      /* 44x44 tap target */
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .list-card-delete:active { background: var(--danger-light); color: var(--danger); }
+
+    /* Boutons confirmation inline */
+    .confirm-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .btn-confirm-no, .btn-confirm-yes {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 40px;
+    }
+    .btn-confirm-no { background: #eeeeee; color: var(--text); }
+    .btn-confirm-no:active { background: #e0e0e0; }
+    .btn-confirm-yes { background: var(--danger); color: white; }
+    .btn-confirm-yes:active { opacity: 0.85; }
+
+    /* ── Add form ── */
+    .add-form {
+      display: flex;
+      gap: 8px;
+      background: var(--card);
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .add-form input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      /* 16px min pour éviter le zoom iOS */
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.15s;
+      background: #fafafa;
+    }
+    .add-form input:focus { border-color: var(--primary-light); background: white; }
+    .add-form button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;
+      flex-shrink: 0;
+    }
+    .add-form button:active { background: var(--primary-light); }
+
+    /* ── Items ── */
+    #items-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+    .item-row {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 0 12px 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      transition: opacity 0.2s, background 0.15s;
+      /* Min height 56px = confortable au doigt */
+      min-height: 56px;
+    }
+    .item-row:active { background: #f5f5f5; }
+    .item-row.checked { background: var(--checked-bg); opacity: 0.72; }
+    .item-row.checked .item-name { text-decoration: line-through; color: var(--text-muted); }
+
+    /* Zone de tap de la coche : 52x52 */
+    .item-check {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      border-radius: 12px;
+    }
+    .item-check:active { background: rgba(0,0,0,0.05); }
+
+    /* Cercle visuel à l'intérieur */
+    .item-check-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      transition: border-color 0.15s, background 0.15s;
+      pointer-events: none;
+    }
+    .item-row.checked .item-check-circle {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: white;
+    }
+
+    .item-name { flex: 1; font-size: 1rem; padding: 4px 0; }
+
+    /* Zone de tap suppression : 44x44 */
+    .item-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1rem;
+      cursor: pointer;
+      min-width: 44px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    .item-delete:active { background: var(--danger-light); color: var(--danger); }
+
+    /* ── Mode courses ── */
+    body.shopping-mode header { background: #1a237e; }
+    #meta-theme { content: "#1a237e"; }
+    body.shopping-mode #btn-shopping { color: #1a237e; }
+
+    body.shopping-mode .item-row { min-height: 68px; }
+
+    /* Coche encore plus grande en mode courses */
+    body.shopping-mode .item-check { width: 64px; height: 64px; }
+    body.shopping-mode .item-check-circle { width: 36px; height: 36px; font-size: 1.1rem; }
+    body.shopping-mode .item-name { font-size: 1.15rem; }
+    body.shopping-mode .item-delete { display: none; }
+    body.shopping-mode .add-form { display: none; }
+    body.shopping-mode #btn-clear-checked { display: none; }
+    body.shopping-mode .actions-bar { display: none; }
+
+    /* ── Actions bar ── */
+    .actions-bar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 8px;
+    }
+    #btn-clear-checked {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      min-height: 40px;
+    }
+    #btn-clear-checked:active { background: var(--danger-light); color: var(--danger); border-color: var(--danger); }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 20px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <button id="btn-back" aria-label="Retour">‹</button>
+    <div style="flex:1;min-width:0">
+      <h1 id="header-title">🛒 Mes listes</h1>
+      <div id="header-subtitle"></div>
+    </div>
+    <button id="btn-shopping">Mode courses</button>
+  </header>
+
+  <main>
+    <!-- Vue : liste des listes -->
+    <div id="view-lists" class="view active">
+      <div id="lists-container"></div>
+      <div class="add-form">
+        <input id="input-new-list" type="text" placeholder="Nouvelle liste…" maxlength="80" autocomplete="off" />
+        <button id="btn-add-list">Créer</button>
+      </div>
+    </div>
+
+    <!-- Vue : articles d'une liste -->
+    <div id="view-items" class="view">
+      <div class="actions-bar">
+        <button id="btn-clear-checked">✓ Vider les cochés</button>
+      </div>
+      <div id="items-container"></div>
+      <div class="add-form">
+        <input id="input-new-item" type="text" placeholder="Ajouter un article…" maxlength="120" autocomplete="off" />
+        <button id="btn-add-item">Ajouter</button>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
