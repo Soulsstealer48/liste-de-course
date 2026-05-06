@@ -1,6 +1,6 @@
 services:
   liste-de-course:
-    build: .
+    image: ghcr.io/soulsstealer48/liste-de-course:latest
     container_name: liste-de-course
     restart: unless-stopped
     ports:
