@@ -6,7 +6,10 @@ services:
     ports:
       - "3030:3030"
     volumes:
-      - ./data:/data
+      - liste-data:/data
     environment:
       - PORT=3030
       - DATA_DIR=/data
+
+volumes:
+  liste-data:
